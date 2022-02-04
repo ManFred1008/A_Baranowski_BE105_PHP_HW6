@@ -65,7 +65,7 @@ function rename_file($path, $name) {
 
 function remove_file($path) {
    if(is_file($path)) unlink($path);
-   else {
+   else { 
       $path_arr = scandir($path);
       $dir_arr = array_diff($path_arr,['.', '..']);
       foreach($dir_arr as $dir_item) {
@@ -74,7 +74,7 @@ function remove_file($path) {
          else unlink($new_path);
       }
    }
-   return rmdir($path);
+   return @rmdir($path);
 }
 
 function create_file($path, $name) {
@@ -110,8 +110,6 @@ function create_file($path, $name) {
 
 function edit_file($path, $content) {
    file_put_contents($path, $content);
-
-   // html_entity_decode(file_put_contents($path, $content));
 
    $file_dir = explode('/', $path);
    array_pop($file_dir);
@@ -181,6 +179,9 @@ function get_file_form ($location) {
 }
 
 function router($path, $command, $name = '') {
+   if ((preg_match('/^\.\/.+\.php$/', $path) || preg_match('/^\.\/.+\.ini$/', $path)) && !check_login()) {
+      exit;
+   }
    switch($command) {
 
       case 'rename': rename_file($path, $name);
@@ -189,7 +190,7 @@ function router($path, $command, $name = '') {
       break;
 
       case 'delete': remove_file($path);                     
-                     header('Refresh: 0');
+                     @header('Refresh: 0');
                      exit;
       break;
 
@@ -207,7 +208,7 @@ function router($path, $command, $name = '') {
       break;
 
       case 'create': create_file($path, $name);
-                     header('Refresh: 0');
+                     @header('Refresh: 0');
                      exit;
       break;
 
@@ -241,6 +242,10 @@ if(!empty($_GET['dir_path']) && $_GET['dir_path'] != './') {
 // echo '</pre>';
 // echo __DIR__;
 // echo __FILE__;
+if ((preg_match('/^\.\/.+\.php$/', $path) || preg_match('/^\.\/.+\.ini$/', $path)) && !check_login()) {
+   header('Location:./');
+}
+
 if (is_dir($path)) {
    $dir_arr = scandir($path);
 
@@ -332,20 +337,51 @@ if (is_dir($path)) {
    $list_dir_html .= '</form></dir>';
 
 } else {
+
    $content = file_get_contents($path);
 
-   // $content = htmlspecialchars(file_get_contents($path));
-
    $list_dir_html = '<form class="form_edit" action="" method="post">
-                     <textarea name="name" value="">'. $content .'</textarea>
+                     <textarea id="#editor" name="name" value="">'. $content .'</textarea>
                      <input type="hidden" name="path" value="'.$path.'"> 
                      <button name="command" value="edit">Save</button>
                      <button name="command" value="back">Back</button>
                      </form>';
 }
 
-$bot_html = '</body>
+$bot_html = ' <script src="https://cdn.ckeditor.com/ckeditor5/31.1.0/classic/ckeditor.js"></script>
+               <script>
+               ClassicEditor
+                     .create( document.querySelector( "#editor" ) )
+                     .then( editor => {
+                              console.log( editor );
+                     } )
+                     .catch( error => {
+                              console.error( error );
+                     } );
+               </script>
+               <p>jglidfjgldfjglfdklgl;dfkg;ld</p>
+             </body>
              </html>';
+
+if (!check_login()) {
+   $html_log = '
+   <form class="form_create" action="" method="POST">
+      <input type="text" name="login" placeholder="login">
+      <input type="password" name="pass">
+      <button name="sign_in">Sing in</button>
+   </form>
+   ';
+} else {
+   $html_log = '
+   <form action="" method="POST">
+      <button name="exit_sess" value="on">Exit</button>
+   </form>
+   ';
+}
+
+
+
+echo $html_log;
 
 echo $top_html;
 
@@ -354,6 +390,7 @@ echo $list_dir_html;
 get_file_form($_POST['form']);
 
 router($_POST['path'], $_POST['command'], $_POST['name']);
+
 
 // print_r(pathinfo('text.php')) ;
 
